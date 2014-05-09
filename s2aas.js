@@ -1,11 +1,12 @@
 
+// Sensor's bitcoin address
+// Hardcoded for now
 var btcAddress = 'mxjr2jvmbNFjQHA8qQ7FkE7jCX7E1jqWrK'
+
+// Needed to connect to secured websocket server
 process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
 // Require websocket client. Later used to get instant payment notification.
 var WebSocketClient = require('websocket').client;
-
-
-
 
 var client = new WebSocketClient();
 
@@ -23,9 +24,9 @@ client.on('connect', function(connection) {
     });
     connection.on('message', function(message) {
     	var message = message.utf8Data;
-    	var message = message.toString();
-    	var message = message.replace(/\\/g, '');
-    	var message = JSON.parse(message);
+    	message = message.toString();
+    	message = message.replace(/\\/g, '');
+    	message = JSON.parse(message);
         console.log('Received message of typ: '+message.event );
         if (message.event == 'transactions:create') {
             var sender = message.data.inputs[0].from_address;
@@ -37,7 +38,8 @@ client.on('connect', function(connection) {
 			}
         }
     });
-
+    // Request notification if unconfirmed transaction
+    // entailing btcAddress appears on the network
     function requestPaymentNotification(btcAddress) {
         if (connection.connected) {
             var json = {
