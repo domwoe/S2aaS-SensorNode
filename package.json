@@ -1,0 +1,10 @@
+{
+    "name": "S2aaS",
+    "version": "0.0.1",
+    "description": "Sensing as a Service using Bitcoin - Proof of Concept",
+    "dependencies": {
+        "bitcore": "latest",
+        "websocket": "latest"
+    },
+    "author": "domwoe"
+}
