@@ -19,16 +19,12 @@ var Address = bitcore.Address;
 var networks = bitcore.networks;
 var WalletKey = bitcore.WalletKey;
 
-var priv = '5KMpLZExnGzeU3oC9qZnKBt7yejLUS8boPiWag33TMX2XEK2Ayc';
-    var s = new WalletKey({
+var s = new WalletKey({
       network: networks.testnet,
-    });
-    s.fromObj({ priv: myPrivateKey});
-    //console.log(s.privKey.compressed)
-    var o = s.storeObj();
-    // console.log(o.priv);
-    // console.log(o.pub)
-    // console.log(o.addr)
+});
+s.fromObj({ priv: myPrivateKey});
+var o = s.storeObj();
+
 
 
 var pushTxEndpoint = 'http://tbtc.blockr.io/api/v1/tx/push';
