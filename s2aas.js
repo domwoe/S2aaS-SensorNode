@@ -171,6 +171,9 @@ function push_tx(tx) {
             // if (!error && response.statusCode == 200) {
             //     console.log(body.id) // Print the shortened url.
             // }
+            if (error || response.statusCode != 200) {
+                io.emit('error','Transaction couldn\'t be pushed to network.');
+            }
             console.log(Date.now()+': Publishing transaction...\n'+
                         'Status code: '+response.statusCode+'\n'+ 
                         ' Body: '+JSON.stringify(body)+'\n'+
