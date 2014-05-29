@@ -27,13 +27,14 @@ io.on('connection', function(socket){
     sensor = JSON.parse(data);
     console.log(data);
     var receiverAddr = sensor.btcAddress;
-    var amount = sensor.price;
+    var amount = sensor.price/10;
     amount += amount*0.1
     get_unspent_txo(function(err, unspent) {
     if (err) {
         console.log(err);
     }
     else {
+        console.log('Preparing tx with\n amount: '+amount+' to '+receiverAddr);
         create_tx(receiverAddr,amount,unspent,function(tx) {
             push_tx(tx);
             console.log(tx);
@@ -189,8 +190,8 @@ function create_tx(receiverAddr,amount,unspent,callback) {
     var opts = {
         remainderOut: {
             address: myBtcAddress
-        },
-        fee: amout*0.1
+        }//,
+        //fee: amount*0.1
     }
     var keys = [];
     keys.push(o.priv); 
