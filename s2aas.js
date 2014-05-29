@@ -1,8 +1,10 @@
 
-// Sensor's bitcoin address
+// Requester's bitcoin address
 // Hardcoded for now
-var myBtcAddress = 'mqUGTixbMJVWNGb29L2o4F3fYHk1QBoutW'
-var myPrivateKey = '93DjZ3SLeTz7Si2pKvGijdgLML5kkzPK5KY3BmN4U79p7KWnt8T';
+var myBtcAddress = 'mnDWsWKiyPwKFDpSGJDTvMbFiAG8CZNTgg'
+var myPrivateKey = '91dTHBam7ryXrqtzqnL46ksGyvEMs4EZvzu4zrEWFWAEguSovKY';
+
+var sensorRepository = 'http://213.165.92.187:3000'
 
 
 // Needed to connect to secured websocket server
@@ -11,6 +13,41 @@ process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
 // Later used to get instant payment notification.
 var WebSocketClient = require('websocket').client;
 var request = require('request');
+
+var express = require('express');
+var app = express();
+var http = require('http').Server(app);
+var io = require('socket.io')(http);
+
+app.use(express.static(__dirname+'/public'));
+
+io.on('connection', function(socket){
+  console.log('Client connected');
+  socket.on('createTx', function(data) {
+    sensor = JSON.parse(data);
+    console.log(data);
+    var receiverAddr = sensor.btcAddress;
+    var amount = sensor.price;
+    amount += amount*0.1
+    get_unspent_txo(function(err, unspent) {
+    if (err) {
+        console.log(err);
+    }
+    else {
+        create_tx(receiverAddr,amount,unspent,function(tx) {
+            push_tx(tx);
+            console.log(tx);
+        });
+    }
+})
+  })
+});
+
+http.listen(3001, function(){
+  console.log('listening on *:3001');
+});
+
+
 
 
 var bitcore = require('bitcore');
@@ -31,10 +68,6 @@ var pushTxEndpoint = 'http://tbtc.blockr.io/api/v1/tx/push';
 var unspentTxoEndpoint = 'http://tbtc.blockr.io/api/v1/address/unspent/';
 var wsNotificationEndpoint = 'wss://ws.biteasy.com/testnet/v1';
 
-// This will be retrieved from the sensor repository
-var receiverAddr = 'mxjr2jvmbNFjQHA8qQ7FkE7jCX7E1jqWrK';
-var amount = '0.001';
-
 // --------------------------------------------------------
 // Unconfirmed tx notification via websocket
 // --------------------------------------------------------
@@ -54,16 +87,17 @@ client.on('connect', function(connection) {
     });
     connection.on('message', function(message) {
     	var message = message.utf8Data;
+        console.log(JSON.stringify(message));
     	message = message.toString();
     	message = message.replace(/\\/g, '');
     	message = JSON.parse(message);
-        console.log('Received message of typ: '+message.event );
+        console.log(Date.now()+': Received message of typ: '+message.event );
         if (message.event == 'transactions:create') {
             var sender = message.data.inputs[0].from_address;
             var data = message.data.outputs;
             for(var i = 0; i<data.length; i++) {
-            	if (data[i].to_address == btcAddress) {
-            		console.log('Received '+data[i].value+' satoshis from '+sender)
+            	if (data[i].to_address == myBtcAddress) {
+            		console.log(Date.now()+': Received '+data[i].value+' satoshis from '+sender)
             	}
 			}
         }
@@ -83,10 +117,10 @@ client.on('connect', function(connection) {
             //setTimeout(sendNumber, 1000);
         }
     }
-    requestPaymentNotification(btcAddress);
+    requestPaymentNotification(myBtcAddress);
 });
 
-//client.connect(wsNotificationEndpoint);
+client.connect(wsNotificationEndpoint);
 // --------------------------------------------------------
 
 // --------------------------------------------------------
@@ -101,7 +135,7 @@ function get_unspent_txo(callback) {
     }, function (error, response, body) {
 
         if (!error && response.statusCode === 200) {
-           // console.log(JSON.stringify(body)) // Print the json response
+            //console.log(JSON.stringify(body)) // Print the json response
             var unspent = body.data.unspent;
             var address = body.data.address;
             if (unspent.length > 0) {
@@ -136,8 +170,8 @@ function push_tx(tx) {
             // if (!error && response.statusCode == 200) {
             //     console.log(body.id) // Print the shortened url.
             // }
-            console.log('Publishing transaction...\n'+
-                        'Response: '+JSON.stringify(response)+'\n'+ 
+            console.log(Date.now()+': Publishing transaction...\n'+
+                        'Status code: '+response.statusCode+'\n'+ 
                         ' Body: '+JSON.stringify(body)+'\n'+
                         ' Error: '+JSON.stringify(error)+'\n');
         }
@@ -149,13 +183,14 @@ function push_tx(tx) {
 function create_tx(receiverAddr,amount,unspent,callback) {
     var TransactionBuilder = bitcore.TransactionBuilder;
     var outs = [{
-            address: 'mxjr2jvmbNFjQHA8qQ7FkE7jCX7E1jqWrK',
-            amount: 0.001
+            address: receiverAddr,
+            amount: amount
           }];
     var opts = {
-            remainderOut: {
-              address: myBtcAddress
-            }
+        remainderOut: {
+            address: myBtcAddress
+        },
+        fee: amout*0.1
     }
     var keys = [];
     keys.push(o.priv); 
@@ -165,18 +200,8 @@ function create_tx(receiverAddr,amount,unspent,callback) {
             .setOutputs(outs)
             .sign(keys)
             .build();  
-
+    
+    //console.log(tx);
     callback(tx.serialize().toString('hex'));
 }
 
-get_unspent_txo(function(err, unspent) {
-    if (err) {
-        console.log(err);
-    }
-    else {
-        create_tx(receiverAddr,amount,unspent,function(tx) {
-            console.log(tx);
-            push_tx(tx);
-        });
-    }
-})

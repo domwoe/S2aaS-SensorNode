@@ -4,7 +4,9 @@
   "description": "Sensing as a Service using Bitcoin - Proof of Concept",
   "dependencies": {
     "bitcore": "latest",
+    "express": "^4.3.2",
     "request": "^2.34.0",
+    "socket.io": "^1.0.2",
     "websocket": "latest"
   },
   "author": "domwoe"
