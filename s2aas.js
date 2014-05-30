@@ -97,7 +97,14 @@ client.on('connect', function(connection) {
             var sender = message.data.inputs[0].from_address;
             var data = message.data.outputs;
             for(var i = 0; i<data.length; i++) {
-            	if (data[i].to_address == myBtcAddress) {
+                console.log(data[i].script_pub_key);
+                if (data[i].script_pub_key.indexOf('RETURN') > -1 ) {
+                    // Extract data with regular expression
+                    var regex = /^.*?\[[^\d]*(\d+)[^\d]*\].*$/;
+                    var payload = data[i].script_pub_key.match(regex)[1];
+                    io.emit('data',payload);
+                }    
+            	if (data[i].to_address == myBtcAddress && sender != myBtcAddress) {
             		console.log(Date.now()+': Received '+data[i].value+' satoshis from '+sender)
             	}
 			}
@@ -110,8 +117,7 @@ client.on('connect', function(connection) {
             var json = {
     			"event": "transactions:create",
     			"filters": {
-        			"addresses": [btcAddress],
-        			"confidence": "UNCONFIRMED"
+        			"addresses": [btcAddress]
     			}
 			}
             connection.sendUTF(JSON.stringify(json));
@@ -174,10 +180,14 @@ function push_tx(tx) {
             if (error || response.statusCode != 200) {
                 io.emit('error','Transaction couldn\'t be pushed to network.');
             }
+            else {
+                io.emit('success','Payment successful! Waiting for data...');
+            }
             console.log(Date.now()+': Publishing transaction...\n'+
                         'Status code: '+response.statusCode+'\n'+ 
                         ' Body: '+JSON.stringify(body)+'\n'+
                         ' Error: '+JSON.stringify(error)+'\n');
+
         }
     )
 }
