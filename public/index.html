@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Requesting Client</title>
+
+    <!-- Bootstrap -->
+    <link href="/css/bootstrap.min.css" rel="stylesheet">
+   <!--  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jasny-bootstrap/3.1.3/css/jasny-bootstrap.min.css"> -->
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="container-fluid">
+      <div class="row-fluid">
+        <div class="col-md-6 col-md-offset-3">
+        <table class="table table-hover centering" id="tblSensors">
+          <thead>
+            <tr>
+              <th>Name</th><th>Unit</th><th>Price [mBTC]</th><th>Description</th><th></th>
+            </tr>
+          </thead>
+          <!-- <tbody data-link="row" class="rowlink"> -->
+          <tbody>
+            <tr></tr>
+          </tbody>
+          </table>
+        </div>
+      </div>
+  </div>
+    
+
+    <!-- Modal -->
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title" id="myModalLabel"></h4>
+          </div>
+          <div class="modal-body" id="myModalBody">
+            <table class="table table-hover centering" id="tblModal">
+            </table>
+          </div>
+          <div class="modal-footer" id="myModalFooter">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            <button id="btnCreateTx" type="button" class="btn btn-success">Buy</button> 
+          </div>
+        </div>
+      </div>
+    </div>
+
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script src="/js/bootstrap.min.js"></script>
+    <script src="/js/alert.js"></script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/jasny-bootstrap/3.1.3/js/jasny-bootstrap.min.js"></script> -->
+
+        
+  </body>
+  <script>
+
+    var socket = io();
+
+    socket.on('error', function(msg){
+      console.log('socket.io: topic: error msg: '+msg);
+       $('<div class="alert alert-error">'+
+        '<a href="#" class="close" data-dismiss="alert">&times;</a>'+
+        '<strong>Error!</strong> A problem has been occurred while submitting your data.'+
+        '</div>').insertAfter('#tblModal');
+      });
+
+    socket.on('success',function(msg) {
+      console.log('socket.io: topic: success msg: '+msg);
+      $('<div class="alert alert-success">'+
+        '<a href="#" class="close" data-dismiss="alert">&times;</a>'+
+        '<strong>Payment completed!</strong> Waiting for data...'+
+        '</div>').insertAfter('#tblModal');
+    });
+
+
+  socket.on('data',function(msg) {
+    console.log('socket.io: topic: data msg: '+msg);
+    $('<div class="alert alert-success">'+
+    '<a href="#" class="close" data-dismiss="alert">&times;</a>'+
+    '<strong>Data received!</strong> '+msg+
+    '</div>').insertAfter('#tblModal');
+  });
+
+
+
+    function getData(endpoint, callback) {
+      $.getJSON("http://213.165.92.187:3000/"+endpoint+"?callback=?", function(result) {
+        callback(result);
+      })
+    }
+    function create_modal(sensor) {
+      var objSensor = JSON.parse(sensor);
+      $('#myModalLabel').text('Sensor Details');
+      $('#myModal').val(sensor);
+      $('#myModal').modal('show'); 
+      $('#tblModal').html(
+          '<tbody>'+
+            '<tr><td>Name:</td><td>'+objSensor.name+'</td></tr>'+
+            '<tr><td>Address:</td><td>'+objSensor.btcAddress+'</td></tr>'+
+            '<tr><td>Price:</td><td>'+objSensor.price+' mBTC</td></tr>'+
+            '<tr><td>Unit:</td><td>'+objSensor.unit+'</td></tr>'+
+            '<tr><td>Location:</td><td>'+objSensor.longitute+','+objSensor.latitude+'</td></tr>'+
+            '<tr><td>Tags:</td><td>'+objSensor.tags+'</td></tr>'+
+            '<tr><td>Description:</td><td>'+objSensor.description+'</td></tr>'+
+            '<tr><td>Rating:</td><td><span class="glyphicon glyphicon-star"><span class="glyphicon glyphicon-star"><span class="glyphicon glyphicon-star"></span></td></tr>'+
+          '</tbody>'
+        );
+    }
+    $(function() {
+      $(document).ready(function() {
+        getData('sensors', function(sensors) {
+          $.each(sensors, function(index,sensor) {
+            sensor.description = 'test';
+            if (sensor.hasOwnProperty('btcAddress') && sensor.hasOwnProperty('price')) {
+              $('#tblSensors tr:last').after(
+                "<tr>"+
+                  "<td>"+sensor.name+"</td>"+
+                  "<td>"+sensor.unit+"</td>"+
+                  "<td>"+sensor.price+"</td>"+
+                  "<td>"+sensor.description+"</td>"+
+                  "<td><button id='btn"+index+"' value='"+JSON.stringify(sensor)+"' type='button' class='btn btn-success btn-sm' onclick='javascript:create_modal(this.value);'>"+
+                  "Buy</button></td>"+
+                "</tr>"
+              );
+              console.log(sensor);
+            }
+          })
+
+        })
+        $('#btnCreateTx').click(function() {
+          socket.emit('createTx',$('#myModal').val());
+
+        })
+      })
+    }) 
+    </script>   
+</html>
