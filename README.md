@@ -1,4 +1,4 @@
 S2aaS-SensorNode
 ================
 
-Sensor node application
+Requester Client application
